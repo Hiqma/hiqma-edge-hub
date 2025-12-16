@@ -39,6 +39,8 @@ import { RedocController } from './docs/redoc.controller';
             password: configService.get('DATABASE_PASSWORD', 'password'),
             database: configService.get('DATABASE_NAME', 'edge_hub'),
             entities: [LocalContent, LocalActivity, LocalDevice, LocalStudent],
+            migrations: ['dist/database/migrations/*.js'],
+            migrationsRun: configService.get('NODE_ENV') === 'production',
             synchronize: configService.get('NODE_ENV') !== 'production',
             logging: configService.get('NODE_ENV') === 'development',
             ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,

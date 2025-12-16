@@ -14,10 +14,10 @@ export class LocalDevice {
   @Column({ default: 'pending' })
   status: 'active' | 'inactive' | 'pending';
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   registeredAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastSeen: Date;
 
   @Column({ type: 'text', nullable: true })
