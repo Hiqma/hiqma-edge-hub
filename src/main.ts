@@ -9,6 +9,15 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
+  // Configure CSP headers for production
+  app.use((req, res, next) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+    );
+    next();
+  });
+  
   // Configure view engine
   app.setBaseViewsDir(join(__dirname, '..', 'views'));
   app.setViewEngine('hbs');
@@ -37,9 +46,17 @@ async function bootstrap() {
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    customSiteTitle: 'Hiqma Edge Hub API Docs - Swagger UI',
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
   SwaggerModule.setup('docs', app, document, {
     customSiteTitle: 'Hiqma Edge Hub API Docs - Swagger UI',
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
   });
   
   await app.listen(process.env.PORT ?? 3000);
