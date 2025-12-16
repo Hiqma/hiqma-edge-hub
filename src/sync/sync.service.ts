@@ -74,12 +74,45 @@ export class SyncService {
       const response = await axios.get(`${this.cloudApiUrl}/sync/content?country=${hubCountry}`);
       const { content } = response.data;
       
+      // Download and cache images for each content item
+      for (const item of content) {
+        // Handle cover image
+        if (item.coverImageUrl) {
+          try {
+            item.localCoverImageUrl = await this.hubService.downloadAndCacheImage(item.coverImageUrl);
+          } catch (error) {
+            this.logger.error(`Failed to download cover image ${item.coverImageUrl}:`, error.message);
+          }
+        }
+        
+        // Handle content images
+        if (item.images && item.images.length > 0) {
+          const localImages = await this.downloadImages(item.images);
+          item.localImages = localImages;
+        }
+      }
+      
       await this.hubService.cacheContent(content);
       
       this.logger.log(`Downloaded and cached ${content.length} content items for ${hubCountry}`);
     } catch (error) {
       this.logger.error('Failed to download content:', error.message);
     }
+  }
+
+  private async downloadImages(imageUrls: string[]): Promise<string[]> {
+    const localImages: string[] = [];
+    
+    for (const imageUrl of imageUrls) {
+      try {
+        const localPath = await this.hubService.downloadAndCacheImage(imageUrl);
+        localImages.push(localPath);
+      } catch (error) {
+        this.logger.error(`Failed to download image ${imageUrl}:`, error.message);
+      }
+    }
+    
+    return localImages;
   }
 
   async manualSync() {

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { OptimizedSyncService } from '../sync/optimized-sync.service';
 import { HubAnalyticsService } from '../analytics/hub-analytics.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 class OptimizeHubDto {
   clearCache?: boolean;
@@ -9,11 +10,12 @@ class OptimizeHubDto {
 }
 
 @ApiTags('Hub Management')
-@Controller('hub')
+@Controller('api/hub')
 export class HubManagementController {
   constructor(
     private syncService: OptimizedSyncService,
     private analyticsService: HubAnalyticsService,
+    private metricsService: MetricsService,
   ) {}
 
   @Get('status')
@@ -67,6 +69,74 @@ export class HubManagementController {
       message: result.success ? 'Sync completed successfully' : 'Sync failed',
       ...result,
     };
+  }
+
+  @Get('sync/stats')
+  @ApiOperation({ summary: 'Get sync statistics' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Sync stats retrieved successfully'
+  })
+  async getSyncStats() {
+    return this.syncService.getSyncStats();
+  }
+
+  @Get('info')
+  @ApiOperation({ summary: 'Get hub discovery information' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Hub info retrieved successfully',
+    example: {
+      success: true,
+      hubName: 'Hiqma Story Hub',
+      hubId: 'HUB-E8BB265E0EA318C8',
+      version: '1.0.0',
+      status: 'online',
+      services: ['content-sync', 'web-interface'],
+      discoverable: true
+    }
+  })
+  async getHubInfo() {
+    return {
+      success: true,
+      hubName: 'Hiqma Story Hub',
+      hubId: process.env.HUB_ID || 'HUB-UNKNOWN',
+      version: '1.0.0',
+      status: 'online',
+      services: ['content-sync', 'web-interface'],
+      discoverable: true
+    };
+  }
+
+  @Post('metrics/report')
+  @ApiOperation({ summary: 'Trigger manual metrics reporting to cloud' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Metrics reported successfully',
+    example: {
+      message: 'Metrics reported successfully',
+      metrics: {
+        totalReaders: 100,
+        activeReaders: 50,
+        totalContent: 25,
+        dataTransferred: 1048576
+      }
+    }
+  })
+  async triggerMetricsReport() {
+    try {
+      await this.metricsService.triggerMetricsReport();
+      const metrics = await this.metricsService.calculateMetrics();
+      return {
+        message: 'Metrics reported successfully',
+        metrics
+      };
+    } catch (error) {
+      return {
+        message: 'Failed to report metrics',
+        error: error.message
+      };
+    }
   }
 
   @Get('performance')

@@ -7,24 +7,25 @@ export class ErrorHandlerMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     const startTime = Date.now();
+    const logger = this.logger;
     
-    this.logger.log(`${req.method} ${req.originalUrl} - ${req.ip}`);
+    logger.log(`${req.method} ${req.originalUrl} - ${req.ip}`);
 
     const originalJson = res.json;
     res.json = function(body) {
       const duration = Date.now() - startTime;
       
       if (res.statusCode >= 400) {
-        this.logger.error(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
+        logger.error(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
       } else {
-        this.logger.log(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
+        logger.log(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
       }
       
       return originalJson.call(this, body);
     }.bind(res);
 
     res.on('error', (error) => {
-      this.logger.error(`Response error for ${req.originalUrl}:`, error);
+      logger.error(`Response error for ${req.originalUrl}:`, error);
     });
 
     next();

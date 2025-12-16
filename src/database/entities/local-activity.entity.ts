@@ -11,6 +11,12 @@ export class LocalActivity {
   @Column()
   contentId: string;
 
+  @Column({ nullable: true })
+  deviceId: string;
+
+  @Column({ nullable: true })
+  studentId: string;
+
   @Column()
   timeSpent: number;
 
@@ -22,6 +28,12 @@ export class LocalActivity {
 
   @Column({ default: false })
   synced: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  eventData: string; // JSON string for additional event data
+
+  @Column({ nullable: true })
+  eventType: string; // Type of interaction (reading, quiz, navigation, etc.)
 
   @CreateDateColumn()
   timestamp: Date;
