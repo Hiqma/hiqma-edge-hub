@@ -104,29 +104,47 @@ export class OptimizedSyncService {
       const cloudApiUrl = process.env.CLOUD_API_URL || 'http://localhost:3001';
       const hubId = process.env.HUB_ID || 'HUB-DEFAULT';
       
+      this.logger.log(`Environment variables - CLOUD_API_URL: ${process.env.CLOUD_API_URL}, HUB_ID: ${process.env.HUB_ID}`);
+      this.logger.log(`Using cloudApiUrl: ${cloudApiUrl}, hubId: ${hubId}`);
+      
       // Get last successful sync timestamp for incremental sync
       const lastSync = this.lastSuccessfulSync?.toISOString();
       const url = lastSync 
         ? `${cloudApiUrl}/edge-hubs/${hubId}/sync-all?since=${lastSync}`
         : `${cloudApiUrl}/edge-hubs/${hubId}/sync-all`;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased timeout
-      
+      this.logger.log(`Constructed URL: ${url}`);
+      this.logger.log(`URL validation - protocol: ${url.startsWith('http')}, contains domain: ${url.includes('.')}, full URL length: ${url.length}`);
       this.logger.log(`Fetching sync data from: ${url}`);
       
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'Accept': 'application/json' },
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       
-      clearTimeout(timeoutId);
+      let response;
+      let syncData;
+      
+      try {
+        response = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' },
+        });
+        
+        this.logger.log(`Fetch response - status: ${response.status}, statusText: ${response.statusText}, ok: ${response.ok}`);
+        
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(`Sync failed: HTTP ${response.status} - ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Sync failed: HTTP ${response.status} - ${response.statusText}`);
+        }
+        
+        syncData = await response.json();
+        this.logger.log(`Successfully parsed JSON response, data keys: ${Object.keys(syncData)}`);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        this.logger.error(`Fetch operation failed - Error type: ${fetchError.constructor.name}, Message: ${fetchError.message}`);
+        this.logger.error(`Fetch error details - URL: ${url}, Error stack: ${fetchError.stack}`);
+        throw fetchError;
       }
-
-      const syncData = await response.json();
 
       // Validate response format
       if (!syncData || typeof syncData !== 'object') {
