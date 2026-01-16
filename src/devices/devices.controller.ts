@@ -25,7 +25,7 @@ class ValidateDeviceDto {
 }
 
 @ApiTags('Edge Hub Devices')
-@Controller('devices')
+@Controller('api/devices')
 export class DevicesController {
   constructor(
     private devicesService: DevicesService,
@@ -289,6 +289,24 @@ export class DevicesController {
   })
   async getDeviceStats() {
     return await this.devicesService.getDeviceStats();
+  }
+
+  @Get('hub/auth-requirements')
+  @ApiOperation({ summary: 'Get hub authentication requirements' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Hub authentication requirements retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        allowAnonymousAccess: { type: 'boolean' },
+        requireStudentAuthentication: { type: 'boolean' },
+        authenticationMessage: { type: 'string', nullable: true }
+      }
+    }
+  })
+  async getHubAuthRequirements() {
+    return await this.devicesService.getHubAuthRequirements();
   }
 
   @Get(':deviceCode/auth')

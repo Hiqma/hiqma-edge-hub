@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{hubName}} - Devices</title>
+    <title>Students - {{hubName}}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -152,10 +152,6 @@
             background: #d4edda;
             color: #155724;
         }
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
         .status-inactive {
             background: #f8d7da;
             color: #721c24;
@@ -165,18 +161,43 @@
             padding: 40px;
             color: #999;
         }
-        .device-code {
+        .student-code {
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             background: #f8f9fa;
             padding: 4px 8px;
             border-radius: 4px;
-            font-size: 14px;
             font-weight: 600;
+            color: #495057;
         }
-        .device-info {
+        .student-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+        .student-info {
+            display: flex;
+            align-items: center;
+        }
+        .student-details {
+            display: flex;
+            flex-direction: column;
+        }
+        .student-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .student-meta {
             font-size: 12px;
             color: #666;
-            margin-top: 4px;
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -184,8 +205,8 @@
     <div class="header">
         <div class="header-content">
             <div>
-                <h1>🌐 {{hubName}}</h1>
-                <div class="header-info">Hub ID: {{hubId}} - Device Management</div>
+                <h1>👥 Students - {{hubName}}</h1>
+                <div class="header-info">Hub ID: {{hubId}}</div>
             </div>
             <a href="/logout" class="btn btn-secondary">Logout</a>
         </div>
@@ -195,8 +216,8 @@
         <div class="nav-content">
             <a href="/dashboard">Dashboard</a>
             <a href="/content">Content</a>
-            <a href="/devices" class="active">Devices</a>
-            <a href="/students">Students</a>
+            <a href="/devices">Devices</a>
+            <a href="/students" class="active">Students</a>
             <a href="/activity">Activity Logs</a>
         </div>
     </div>
@@ -204,112 +225,145 @@
     <div class="container">
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-label">Total Devices</div>
-                <div class="metric-value">{{deviceStats.totalDevices}}</div>
+                <div class="metric-label">Total Students</div>
+                <div class="metric-value">{{studentStats.totalStudents}}</div>
                 <div class="metric-subtitle">Synced from cloud</div>
             </div>
             
             <div class="metric-card">
-                <div class="metric-label">Active Devices</div>
-                <div class="metric-value">{{deviceStats.activeDevices}}</div>
-                <div class="metric-subtitle">Currently online</div>
+                <div class="metric-label">Active Students</div>
+                <div class="metric-value">{{studentStats.activeStudents}}</div>
+                <div class="metric-subtitle">Available for login</div>
             </div>
             
             <div class="metric-card">
-                <div class="metric-label">Registered</div>
-                <div class="metric-value">{{deviceStats.registeredDevices}}</div>
-                <div class="metric-subtitle">Connected devices</div>
+                <div class="metric-label">Recent Activity</div>
+                <div class="metric-value">{{studentStats.recentActivity}}</div>
+                <div class="metric-subtitle">Last 7 days</div>
             </div>
             
             <div class="metric-card">
-                <div class="metric-label">Pending</div>
-                <div class="metric-value">{{deviceStats.pendingDevices}}</div>
-                <div class="metric-subtitle">Awaiting connection</div>
+                <div class="metric-label">Sync Status</div>
+                <div class="metric-value">{{studentStats.syncedStudents}}</div>
+                <div class="metric-subtitle">Successfully synced</div>
             </div>
         </div>
         
         <div class="card">
-            <h2>📱 Device List</h2>
-            {{#if devices}}
+            <h2>📚 Student Directory</h2>
+            {{#if students}}
             <table>
                 <thead>
                     <tr>
-                        <th>Device Code</th>
-                        <th>Name</th>
+                        <th>Student</th>
+                        <th>Student Code</th>
+                        <th>Grade</th>
+                        <th>Age</th>
                         <th>Status</th>
-                        <th>Device Info</th>
-                        <th>Registered At</th>
-                        <th>Last Seen</th>
+                        <th>Last Updated</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {{#each devices}}
+                    {{#each students}}
                     <tr>
                         <td>
-                            <div class="device-code">{{this.deviceCode}}</div>
-                        </td>
-                        <td>
-                            <strong>{{#if this.name}}{{this.name}}{{else}}Unnamed Device{{/if}}</strong>
-                        </td>
-                        <td>
-                            <span class="status-badge status-{{this.status}}">
-                                {{this.status}}
-                            </span>
-                        </td>
-                        <td>
-                            {{#if this.deviceInfo}}
-                                <div class="device-info">
-                                    Device info available
+                            <div class="student-info">
+                                <div class="student-avatar">
+                                    {{#if firstName}}
+                                        {{substring firstName 0 1}}{{#if lastName}}{{substring lastName 0 1}}{{/if}}
+                                    {{else}}
+                                        👤
+                                    {{/if}}
                                 </div>
-                            {{else}}
-                                <span style="color: #999;">No device info</span>
-                            {{/if}}
+                                <div class="student-details">
+                                    <div class="student-name">
+                                        {{#if firstName}}
+                                            {{firstName}}{{#if lastName}} {{lastName}}{{/if}}
+                                        {{else}}
+                                            Student {{studentCode}}
+                                        {{/if}}
+                                    </div>
+                                    {{#if metadata}}
+                                    <div class="student-meta">Additional info available</div>
+                                    {{/if}}
+                                </div>
+                            </div>
                         </td>
                         <td>
-                            {{#if this.registeredAt}}
-                                {{this.registeredAt}}
-                            {{else}}
-                                <span style="color: #999;">Not registered</span>
-                            {{/if}}
+                            <span class="student-code">{{studentCode}}</span>
                         </td>
+                        <td>{{#if grade}}{{grade}}{{else}}-{{/if}}</td>
+                        <td>{{#if age}}{{age}} years{{else}}-{{/if}}</td>
                         <td>
-                            {{#if this.lastSeen}}
-                                {{this.lastSeen}}
+                            {{#if (eq status 'active')}}
+                                <span class="status-badge status-active">Active</span>
                             {{else}}
-                                <span style="color: #999;">Never</span>
+                                <span class="status-badge status-inactive">Inactive</span>
                             {{/if}}
                         </td>
+                        <td>{{formatDate updatedAt}}</td>
                     </tr>
                     {{/each}}
                 </tbody>
             </table>
             {{else}}
             <div class="empty-state">
-                <p>📱 No devices found</p>
-                <p>Devices will appear here after they are synced from the cloud API.</p>
+                <p>📭 No students found</p>
+                <p style="margin-top: 10px; font-size: 14px;">Students are managed from the cloud dashboard and synced automatically to this hub.</p>
             </div>
             {{/if}}
         </div>
         
-        {{#if deviceStats.lastActivity}}
+        {{#if students}}
         <div class="card">
-            <h2>📊 Device Activity</h2>
+            <h2>📊 Student Analytics</h2>
             <table>
                 <tr>
-                    <td><strong>Last Device Activity</strong></td>
-                    <td>{{deviceStats.lastActivity}}</td>
+                    <td><strong>Total Students</strong></td>
+                    <td>{{students.length}}</td>
                 </tr>
                 <tr>
-                    <td><strong>Total Devices</strong></td>
-                    <td>{{deviceStats.totalDevices}}</td>
+                    <td><strong>Active Students</strong></td>
+                    <td>{{studentStats.activeStudents}}</td>
                 </tr>
                 <tr>
-                    <td><strong>Registered Devices</strong></td>
-                    <td>{{deviceStats.registeredDevices}}</td>
+                    <td><strong>Students with Names</strong></td>
+                    <td>{{studentStats.studentsWithNames}}</td>
+                </tr>
+                <tr>
+                    <td><strong>Students with Grade Info</strong></td>
+                    <td>{{studentStats.studentsWithGrade}}</td>
+                </tr>
+                <tr>
+                    <td><strong>Last Sync</strong></td>
+                    <td>{{#if studentStats.lastSync}}{{formatDate studentStats.lastSync}}{{else}}Never{{/if}}</td>
                 </tr>
             </table>
         </div>
         {{/if}}
     </div>
+
+    <script>
+        // Helper function for Handlebars
+        if (typeof Handlebars !== 'undefined') {
+            Handlebars.registerHelper('eq', function(a, b) {
+                return a === b;
+            });
+            
+            Handlebars.registerHelper('substring', function(str, start, end) {
+                if (str && typeof str === 'string') {
+                    return str.substring(start, end).toUpperCase();
+                }
+                return '';
+            });
+            
+            Handlebars.registerHelper('formatDate', function(date) {
+                if (date) {
+                    return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
+                }
+                return 'Unknown';
+            });
+        }
+    </script>
 </body>
 </html>

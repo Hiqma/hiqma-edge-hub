@@ -6,6 +6,8 @@ import { LocalContent, LocalActivity } from '../database/entities';
 import { OptimizedSyncService } from '../sync/optimized-sync.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { DevicesService } from '../devices/devices.service';
+import { StudentsService } from '../students/students.service';
+import { HubSettingsService } from '../config/hub-settings.service';
 
 @Controller()
 export class WebController {
@@ -17,6 +19,8 @@ export class WebController {
     private syncService: OptimizedSyncService,
     private metricsService: MetricsService,
     private devicesService: DevicesService,
+    private studentsService: StudentsService,
+    private hubSettingsService: HubSettingsService,
   ) {}
 
   @Get()
@@ -57,7 +61,7 @@ export class WebController {
       return res.redirect('/');
     }
 
-    const [content, activityCount, metrics, syncStats, deviceStats] = await Promise.all([
+    const [content, activityCount, metrics, syncStats, deviceStats, studentStats, hubSettings] = await Promise.all([
       this.contentRepository.find({
         order: { cachedAt: 'DESC' },
         take: 100,
@@ -66,6 +70,8 @@ export class WebController {
       this.metricsService.calculateMetrics(),
       this.syncService.getSyncStats(),
       this.devicesService.getDeviceStats(),
+      this.studentsService.getStudentStats(),
+      this.hubSettingsService.getAuthSettings(),
     ]);
 
     return res.render('dashboard', {
@@ -77,6 +83,8 @@ export class WebController {
       metrics,
       syncStats,
       deviceStats,
+      studentStats,
+      hubSettings,
     });
   }
 
@@ -129,6 +137,25 @@ export class WebController {
       hubName: process.env.HUB_NAME || 'Edge Hub',
       devices,
       deviceStats,
+    });
+  }
+
+  @Get('students')
+  async getStudents(@Session() session: Record<string, any>, @Res() res: Response) {
+    if (!session.authenticated) {
+      return res.redirect('/');
+    }
+
+    const [students, studentStats] = await Promise.all([
+      this.studentsService.getAllStudents(),
+      this.studentsService.getStudentStats(),
+    ]);
+
+    return res.render('students', {
+      hubId: session.hubId,
+      hubName: process.env.HUB_NAME || 'Edge Hub',
+      students,
+      studentStats,
     });
   }
 

@@ -125,6 +125,20 @@ export class HubAnalyticsService {
         }
       }
 
+      // Check if this exact event already exists (duplicate prevention)
+      const existing = await this.activityRepository.findOne({
+        where: {
+          sessionId: event.sessionId,
+          contentId: event.contentId,
+          timeSpent: event.timeSpent || 0,
+        },
+      });
+
+      if (existing) {
+        this.logger.debug(`Skipping duplicate analytics event: ${event.eventType} for content ${event.contentId}`);
+        return; // Skip duplicate
+      }
+
       const activity = this.activityRepository.create({
         sessionId: event.sessionId,
         contentId: event.contentId,
@@ -141,6 +155,12 @@ export class HubAnalyticsService {
       await this.activityRepository.save(activity);
       this.logger.debug(`Recorded analytics event: ${event.eventType} for content ${event.contentId}`);
     } catch (error) {
+      // If it's a unique constraint violation, just log and skip
+      if (error.code === 'SQLITE_CONSTRAINT' || error.message?.includes('UNIQUE constraint failed')) {
+        this.logger.debug(`Skipping duplicate analytics event (constraint): ${event.eventType}`);
+        return;
+      }
+      
       this.logger.error(`Error recording analytics event: ${error.message}`, error.stack);
       throw error;
     }
@@ -167,8 +187,8 @@ export class HubAnalyticsService {
       throw new Error('timeSpent must be a non-negative number');
     }
 
-    if (event.quizScore !== undefined && (typeof event.quizScore !== 'number' || event.quizScore < 0 || event.quizScore > 100)) {
-      throw new Error('quizScore must be a number between 0 and 100');
+    if (event.quizScore !== undefined && event.quizScore !== null && (typeof event.quizScore !== 'number' || event.quizScore < 0 || event.quizScore > 100)) {
+      throw new Error('quizScore must be a number between 0 and 100 or null');
     }
 
     if (event.moduleCompleted !== undefined && typeof event.moduleCompleted !== 'boolean') {

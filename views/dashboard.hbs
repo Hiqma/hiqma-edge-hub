@@ -184,6 +184,7 @@
             <a href="/dashboard" class="active">Dashboard</a>
             <a href="/content">Content</a>
             <a href="/devices">Devices</a>
+            <a href="/students">Students</a>
             <a href="/activity">Activity Logs</a>
         </div>
     </div>
@@ -203,6 +204,24 @@
             </div>
             
             <div class="metric-card">
+                <div class="metric-label">Total Students</div>
+                <div class="metric-value">{{studentStats.totalStudents}}</div>
+                <div class="metric-subtitle">{{studentStats.activeStudents}} active</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Registered Devices</div>
+                <div class="metric-value">{{deviceStats.registeredDevices}}</div>
+                <div class="metric-subtitle">Ready to use</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Unregistered Devices</div>
+                <div class="metric-value">{{deviceStats.pendingDevices}}</div>
+                <div class="metric-subtitle">Awaiting setup</div>
+            </div>
+            
+            <div class="metric-card">
                 <div class="metric-label">Total Readers</div>
                 <div class="metric-value">{{metrics.totalReaders}}</div>
                 <div class="metric-subtitle">Last 30 days</div>
@@ -212,12 +231,6 @@
                 <div class="metric-label">Active Readers</div>
                 <div class="metric-value">{{metrics.activeReaders}}</div>
                 <div class="metric-subtitle">Last 7 days</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">Registered Devices</div>
-                <div class="metric-value">{{deviceStats.registeredDevices}}</div>
-                <div class="metric-subtitle">{{deviceStats.totalDevices}} total</div>
             </div>
             
             <div class="metric-card">
@@ -256,6 +269,38 @@
                         {{/if}}
                     </td>
                 </tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>Hub Authentication Settings</h2>
+            <table>
+                <tr>
+                    <td><strong>Anonymous Access Allowed</strong></td>
+                    <td>
+                        {{#if hubSettings.allowAnonymousAccess}}
+                            <span class="status-badge status-success">Yes</span>
+                        {{else}}
+                            <span class="status-badge status-warning">No</span>
+                        {{/if}}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Student Authentication Required</strong></td>
+                    <td>
+                        {{#if hubSettings.requireStudentAuthentication}}
+                            <span class="status-badge status-warning">Yes</span>
+                        {{else}}
+                            <span class="status-badge status-success">No</span>
+                        {{/if}}
+                    </td>
+                </tr>
+                {{#if hubSettings.authenticationMessage}}
+                <tr>
+                    <td><strong>Authentication Message</strong></td>
+                    <td>{{hubSettings.authenticationMessage}}</td>
+                </tr>
+                {{/if}}
             </table>
         </div>
         

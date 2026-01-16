@@ -4,7 +4,7 @@ import { RateLimiterService } from '../security/rate-limiter.service';
 import type { StudentAuthRequest, StudentAuthResponse } from './students.service';
 import type { Request } from 'express';
 
-@Controller('students')
+@Controller('api/students')
 export class StudentsController {
   private readonly logger = new Logger(StudentsController.name);
 

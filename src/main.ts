@@ -27,6 +27,25 @@ async function bootstrap() {
     return a > b;
   });
   
+  hbs.registerHelper('eq', function(a, b) {
+    return a === b;
+  });
+  
+  hbs.registerHelper('substring', function(str, start, end) {
+    if (str && typeof str === 'string') {
+      return str.substring(start, end).toUpperCase();
+    }
+    return '';
+  });
+  
+  hbs.registerHelper('formatDate', function(date) {
+    if (date) {
+      const d = new Date(date);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+    }
+    return 'Unknown';
+  });
+  
   // Configure session
   app.use(
     session({

@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LocalContent, LocalActivity, LocalDevice, LocalStudent } from './database/entities';
+import { LocalContent, LocalActivity, LocalDevice, LocalStudent, HubSettings } from './database/entities';
 import { HubModule } from './hub/hub.module';
 import { SyncModule } from './sync/sync.module';
 import { DevicesModule } from './devices/devices.module';
@@ -20,6 +20,7 @@ import { HubAnalyticsService } from './analytics/hub-analytics.service';
 import { ContentCacheService } from './cache/content-cache.service';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
 import { RedocController } from './docs/redoc.controller';
+import { ConfigModule as HubConfigModule } from './config/config.module';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { RedocController } from './docs/redoc.controller';
             username: configService.get('DATABASE_USERNAME', 'postgres'),
             password: configService.get('DATABASE_PASSWORD', 'password'),
             database: configService.get('DATABASE_NAME', 'edge_hub'),
-            entities: [LocalContent, LocalActivity, LocalDevice, LocalStudent],
+            entities: [LocalContent, LocalActivity, LocalDevice, LocalStudent, HubSettings],
             migrations: ['dist/database/migrations/*.js'],
             migrationsRun: configService.get('NODE_ENV') === 'production',
             synchronize: configService.get('NODE_ENV') !== 'production',
@@ -51,13 +52,13 @@ import { RedocController } from './docs/redoc.controller';
         return {
           type: 'sqlite',
           database: configService.get('DATABASE_PATH', './data/hub.db'),
-          entities: [LocalContent, LocalActivity, LocalDevice, LocalStudent],
+          entities: [LocalContent, LocalActivity, LocalDevice, LocalStudent, HubSettings],
           synchronize: configService.get('NODE_ENV') !== 'production',
           logging: configService.get('NODE_ENV') === 'development',
         };
       },
     }),
-    TypeOrmModule.forFeature([LocalContent, LocalActivity, LocalDevice, LocalStudent]),
+    TypeOrmModule.forFeature([LocalContent, LocalActivity, LocalDevice, LocalStudent, HubSettings]),
     HubModule,
     SyncModule,
     DevicesModule,
@@ -66,6 +67,7 @@ import { RedocController } from './docs/redoc.controller';
     MetricsModule,
     WebModule,
     SecurityModule,
+    HubConfigModule,
   ],
   controllers: [AppController, HealthController, HubManagementController, RedocController],
   providers: [AppService, OptimizedSyncService, HubAnalyticsService, ContentCacheService],

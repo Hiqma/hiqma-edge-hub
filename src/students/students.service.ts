@@ -236,23 +236,59 @@ export class StudentsService {
    * Get student statistics
    */
   async getStudentStats(): Promise<{
-    total: number;
-    active: number;
-    inactive: number;
-    synced: number;
+    totalStudents: number;
+    activeStudents: number;
+    recentActivity: number;
+    syncedStudents: number;
+    studentsWithNames: number;
+    studentsWithGrade: number;
+    lastSync: Date | null;
   }> {
     try {
-      const [total, active, inactive, synced] = await Promise.all([
+      const [total, active, synced] = await Promise.all([
         this.studentRepository.count(),
         this.studentRepository.count({ where: { status: 'active' } }),
-        this.studentRepository.count({ where: { status: 'inactive' } }),
         this.studentRepository.count({ where: { synced: true } }),
       ]);
 
-      return { total, active, inactive, synced };
+      // Count students with names using query builder
+      const withNames = await this.studentRepository
+        .createQueryBuilder('student')
+        .where('student.firstName IS NOT NULL OR student.lastName IS NOT NULL')
+        .getCount();
+
+      // Count students with grade info
+      const withGrade = await this.studentRepository
+        .createQueryBuilder('student')
+        .where('student.grade IS NOT NULL')
+        .getCount();
+
+      // Get the most recent sync time
+      const lastSyncedStudent = await this.studentRepository.findOne({
+        where: { synced: true },
+        order: { updatedAt: 'DESC' }
+      });
+
+      return { 
+        totalStudents: total, 
+        activeStudents: active, 
+        recentActivity: active, // For now, use active students as recent activity
+        syncedStudents: synced,
+        studentsWithNames: withNames,
+        studentsWithGrade: withGrade,
+        lastSync: lastSyncedStudent?.updatedAt || null
+      };
     } catch (error) {
       this.logger.error(`Error getting student stats: ${error.message}`, error.stack);
-      return { total: 0, active: 0, inactive: 0, synced: 0 };
+      return { 
+        totalStudents: 0, 
+        activeStudents: 0, 
+        recentActivity: 0, 
+        syncedStudents: 0,
+        studentsWithNames: 0,
+        studentsWithGrade: 0,
+        lastSync: null
+      };
     }
   }
 

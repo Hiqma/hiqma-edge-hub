@@ -72,6 +72,7 @@ export class MetricsService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-API-Key': process.env.CLOUD_API_KEY || '',
       },
       body: JSON.stringify(metrics),
     });

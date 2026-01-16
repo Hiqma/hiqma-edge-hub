@@ -28,33 +28,69 @@ export class ContentCacheService {
     const content = await this.contentRepository.findOne({ where: { cloudId: id } });
     
     if (content) {
+      // Parse JSON fields that are stored as strings
+      const parsedContent = {
+        ...content,
+        comprehensionQuestions: this.parseJsonField(content.comprehensionQuestions),
+        targetCountries: this.parseJsonField(content.targetCountries),
+        images: this.parseJsonField(content.images),
+      };
+
       if (this.memoryCache.size >= 100) {
         const firstKey = this.memoryCache.keys().next().value;
         this.memoryCache.delete(firstKey);
       }
       
-      this.memoryCache.set(id, content);
+      this.memoryCache.set(id, parsedContent);
       this.cacheStats.size = this.memoryCache.size;
+      
+      return parsedContent;
     }
 
     return content;
   }
 
   async getAllContent(limit = 50): Promise<any[]> {
-    return this.contentRepository.find({
+    const content = await this.contentRepository.find({
       take: limit,
       order: { cachedAt: 'DESC' },
     });
+
+    // Parse JSON fields that are stored as strings
+    return content.map(item => ({
+      ...item,
+      comprehensionQuestions: this.parseJsonField(item.comprehensionQuestions),
+      targetCountries: this.parseJsonField(item.targetCountries),
+      images: this.parseJsonField(item.images),
+    }));
   }
 
   async searchContent(query: string): Promise<any[]> {
-    return this.contentRepository
+    const content = await this.contentRepository
       .createQueryBuilder('content')
       .where('content.title LIKE :query OR content.category LIKE :query', {
         query: `%${query}%`,
       })
       .take(20)
       .getMany();
+
+    // Parse JSON fields that are stored as strings
+    return content.map(item => ({
+      ...item,
+      comprehensionQuestions: this.parseJsonField(item.comprehensionQuestions),
+      targetCountries: this.parseJsonField(item.targetCountries),
+      images: this.parseJsonField(item.images),
+    }));
+  }
+
+  private parseJsonField(field: string | null): any {
+    if (!field) return [];
+    try {
+      return JSON.parse(field);
+    } catch (e) {
+      this.logger.warn(`Failed to parse JSON field: ${field}`);
+      return [];
+    }
   }
 
   invalidateCache(id?: string) {

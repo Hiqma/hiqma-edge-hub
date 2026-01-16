@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { LocalContent } from '../database/entities';
 import { DevicesService } from '../devices/devices.service';
 import { StudentsService } from '../students/students.service';
 import { HubAnalyticsService } from '../analytics/hub-analytics.service';
+import { HubSettingsService } from '../config/hub-settings.service';
 
 export interface SyncResult {
   success: boolean;
@@ -59,6 +60,7 @@ export class OptimizedSyncService {
     private devicesService: DevicesService,
     private studentsService: StudentsService,
     private analyticsService: HubAnalyticsService,
+    private hubSettingsService: HubSettingsService,
   ) {}
 
   @Cron('0 */3 * * * *') // Every 3 minutes
@@ -124,9 +126,15 @@ export class OptimizedSyncService {
       let syncData;
       
       try {
+        const apiKey = process.env.CLOUD_API_KEY || '';
+        this.logger.log(`Using API key: ${apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET'}`);
+        
         response = await fetch(url, {
           signal: controller.signal,
-          headers: { 'Accept': 'application/json' },
+          headers: { 
+            'Accept': 'application/json',
+            'X-API-Key': apiKey,
+          },
         });
         
         this.logger.log(`Fetch response - status: ${response.status}, statusText: ${response.statusText}, ok: ${response.ok}`);
@@ -151,19 +159,20 @@ export class OptimizedSyncService {
         throw new Error('Invalid response format - expected object with content, devices, and students');
       }
 
-      const { content = [], devices = [], students = [] } = syncData;
-      this.logger.log(`Received sync data: ${content.length} content, ${devices.length} devices, ${students.length} students`);
+      const { content = [], devices = [], students = [], hubSettings } = syncData;
+      this.logger.log(`Received sync data: ${content.length} content, ${devices.length} devices, ${students.length} students, hubSettings: ${!!hubSettings}`);
 
       // Perform coordinated sync operations with error handling
       const syncOperations = await Promise.allSettled([
         this.syncDevices(devices),
         this.syncStudents(students),
         this.syncContent(content),
+        this.syncHubSettings(hubSettings),
         this.syncAnalyticsToCloud(),
       ]);
 
       // Process sync results
-      const [devicesResult, studentsResult, contentResult, analyticsResult] = syncOperations;
+      const [devicesResult, studentsResult, contentResult, hubSettingsResult, analyticsResult] = syncOperations;
 
       // Handle devices sync result
       if (devicesResult.status === 'fulfilled') {
@@ -205,6 +214,14 @@ export class OptimizedSyncService {
         };
         syncResult.errors!.push(`Content sync failed: ${contentResult.reason?.message}`);
         syncResult.partialSync = true;
+      }
+
+      // Handle hub settings sync result (optional - don't fail sync if this fails)
+      if (hubSettingsResult.status === 'fulfilled') {
+        this.logger.log('Hub settings synced successfully');
+      } else {
+        this.logger.warn(`Hub settings sync failed: ${hubSettingsResult.reason?.message}`);
+        // Don't mark as partial sync failure for hub settings
       }
 
       // Handle analytics sync result
@@ -436,6 +453,7 @@ export class OptimizedSyncService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-API-Key': process.env.CLOUD_API_KEY || '',
         },
         body: JSON.stringify({ analyticsData }),
       });
@@ -787,9 +805,7 @@ export class OptimizedSyncService {
       if (!student.studentCode) {
         errors.push(`Student at index ${index} missing required field: studentCode`);
       }
-      if (!student.hubId) {
-        errors.push(`Student at index ${index} missing required field: hubId`);
-      }
+      // Note: hubId is not required since students are already filtered by hub in cloud-api
 
       // Data type validation
       if (student.id && typeof student.id !== 'string') {
@@ -1097,6 +1113,37 @@ export class OptimizedSyncService {
   }
 
   /**
+   * Sync hub settings from cloud API
+   */
+  private async syncHubSettings(hubSettings: any): Promise<{ success: boolean; count: number; errors?: string[] }> {
+    try {
+      if (!hubSettings || typeof hubSettings !== 'object') {
+        this.logger.log('No hub settings received from cloud API, using defaults');
+        return { success: true, count: 0 };
+      }
+
+      this.logger.log(`Syncing hub settings: ${JSON.stringify(hubSettings)}`);
+
+      // Update hub settings
+      await this.hubSettingsService.updateAuthSettings({
+        allowAnonymousAccess: hubSettings.allowAnonymousAccess,
+        requireStudentAuthentication: hubSettings.requireStudentAuthentication,
+        authenticationMessage: hubSettings.authenticationMessage,
+      });
+
+      this.logger.log('Hub settings synced successfully');
+      return { success: true, count: 1 };
+    } catch (error) {
+      this.logger.error(`Failed to sync hub settings: ${error.message}`, error.stack);
+      return { 
+        success: false, 
+        count: 0, 
+        errors: [error.message] 
+      };
+    }
+  }
+
+  /**
    * Check database integrity on startup to prevent data loss
    */
   async checkDatabaseIntegrityOnStartup(): Promise<{ isHealthy: boolean; issues: string[]; stats: any }> {
@@ -1108,7 +1155,7 @@ export class OptimizedSyncService {
       // Check content table
       const contentCount = await this.contentRepository.count();
       const contentWithCloudId = await this.contentRepository.count({
-        where: { cloudId: { $ne: null } as any }
+        where: { cloudId: Not(IsNull()) }
       });
       
       // Check devices table

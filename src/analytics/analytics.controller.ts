@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, Param, Query, Logger, HttpException, HttpS
 import { HubAnalyticsService } from './hub-analytics.service';
 import type { AnalyticsEvent } from './hub-analytics.service';
 
-@Controller('analytics')
+@Controller('api/analytics')
 export class AnalyticsController {
   private readonly logger = new Logger(AnalyticsController.name);
 
@@ -196,10 +196,13 @@ export class AnalyticsController {
   async collectAnalytics(@Body() { analyticsData }: { analyticsData: any[] }) {
     try {
       if (!Array.isArray(analyticsData) || analyticsData.length === 0) {
+        this.logger.warn('Analytics collect called with empty or invalid data');
         throw new HttpException('analyticsData array is required and must not be empty', HttpStatus.BAD_REQUEST);
       }
 
+      this.logger.log(`=== ANALYTICS COLLECT START ===`);
       this.logger.log(`Collecting ${analyticsData.length} analytics events from mobile app`);
+      this.logger.log(`Sample event: ${JSON.stringify(analyticsData[0])}`);
 
       const results: Array<{ success: boolean; event: string; error?: string }> = [];
       for (const eventData of analyticsData) {
@@ -217,6 +220,7 @@ export class AnalyticsController {
             moduleCompleted: eventData.moduleCompleted || false,
           };
 
+          this.logger.debug(`Recording event: ${event.eventType} for content ${event.contentId}`);
           await this.analyticsService.recordEvent(event);
           results.push({ success: true, event: event.eventType });
         } catch (error) {
@@ -227,6 +231,7 @@ export class AnalyticsController {
 
       const successCount = results.filter(r => r.success).length;
       this.logger.log(`Successfully recorded ${successCount}/${analyticsData.length} analytics events`);
+      this.logger.log(`=== ANALYTICS COLLECT COMPLETE ===`);
       
       return { 
         success: true, 

@@ -2,12 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { LocalDevice } from '../database/entities';
+import { HubSettingsService } from '../config/hub-settings.service';
 
 @Injectable()
 export class DevicesService {
   constructor(
     @InjectRepository(LocalDevice)
     private deviceRepository: Repository<LocalDevice>,
+    private hubSettingsService: HubSettingsService,
   ) {}
 
   /**
@@ -258,6 +260,17 @@ export class DevicesService {
       .createQueryBuilder('device')
       .where('device.deviceCode NOT IN (:...deviceCodes)', { deviceCodes })
       .getMany();
+  }
+
+  /**
+   * Get hub authentication requirements for device registration
+   */
+  async getHubAuthRequirements(): Promise<{
+    allowAnonymousAccess: boolean;
+    requireStudentAuthentication: boolean;
+    authenticationMessage?: string;
+  }> {
+    return await this.hubSettingsService.getAuthSettings();
   }
 
   /**

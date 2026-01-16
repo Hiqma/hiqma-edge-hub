@@ -4,6 +4,8 @@ import type { Response } from 'express';
 import * as path from 'path';
 import { HubService } from './hub.service';
 import { ContentCacheService } from '../cache/content-cache.service';
+import { HubSettingsService } from '../config/hub-settings.service';
+import { StudentsService } from '../students/students.service';
 
 class UploadActivityDto {
   sessionId: string;
@@ -14,11 +16,13 @@ class UploadActivityDto {
 }
 
 @ApiTags('Hub')
-@Controller('hub')
+@Controller('api/hub')
 export class HubController {
   constructor(
     private hubService: HubService,
     private cacheService: ContentCacheService,
+    private hubSettingsService: HubSettingsService,
+    private studentsService: StudentsService,
   ) {}
 
   @Get('download')
@@ -46,8 +50,25 @@ export class HubController {
     } else {
       content = await this.cacheService.getAllContent(limit ? parseInt(limit) : 50);
     }
+
+    // Get hub authentication settings
+    const hubSettings = await this.hubSettingsService.getAuthSettings();
+    
+    // Get students for local authentication
+    const students = await this.studentsService.getAllStudents();
+
     return {
       content,
+      students: students.map(student => ({
+        id: student.id,
+        studentCode: student.studentCode,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        grade: student.grade,
+        age: student.age,
+        status: student.status,
+      })),
+      hubSettings,
       lastSync: new Date(),
       cacheStats: this.cacheService.getCacheStats(),
     };
@@ -197,5 +218,20 @@ export class HubController {
       lastCloudSync: new Date(),
       nextPlannedSync: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
     };
+  }
+
+  @Get('settings')
+  @ApiOperation({ summary: 'Get hub authentication settings' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Hub settings retrieved successfully',
+    example: {
+      allowAnonymousAccess: true,
+      requireStudentAuthentication: false,
+      authenticationMessage: 'Please enter your student code to access personalized content.'
+    }
+  })
+  async getHubSettings() {
+    return await this.hubSettingsService.getAuthSettings();
   }
 }

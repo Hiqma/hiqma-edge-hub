@@ -7,6 +7,7 @@ import { MetricsModule } from '../metrics/metrics.module';
 import { DevicesModule } from '../devices/devices.module';
 import { StudentsModule } from '../students/students.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
     DevicesModule,
     StudentsModule,
     AnalyticsModule,
+    ConfigModule,
   ],
   controllers: [WebController],
   providers: [OptimizedSyncService],
